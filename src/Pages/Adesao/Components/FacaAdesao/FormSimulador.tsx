@@ -4,6 +4,7 @@ import styled from 'styled-components'
 import arrowIcon from 'Assets/images/icons/arrow.png'
 import { useFormik } from 'formik'
 import { formatCurrency, formatDecimalNumber } from 'Utils/helpers'
+import axios from "axios";
 
 const CustomForm = styled(Form)`
   display: flex;
@@ -156,7 +157,12 @@ const FormSimulador = (props: TProps) => {
   const [economiaCO2, setEconomiaCO2] = useState('')
   const [economiaArvores, setEconomiaArvores] = useState('')
 
-  const onSubmit = () => {}
+  const onSubmit = async () => {
+    let obj = {...JSON.parse(localStorage.getItem("faseOne") as string)};
+    obj = {...obj, ...formik.values}
+    let response = await axios.post("http://localhost:8080/acquisition", obj)
+    handleFaseChange(3);
+  }
 
   const formik = useFormik<TForm>({
     initialValues,
@@ -197,12 +203,12 @@ const FormSimulador = (props: TProps) => {
     const formattedValorCO2 = formatDecimalNumber(_economiaCO2)
     setEconomiaCO2(`Menos ${formattedValorCO2}kg de CO2`)
 
-    const _economiaArvores = Math.round((valorDesconto / 1000000) * 0.504)
+    const _economiaArvores = Math.ceil((valorDesconto / 1000000) * 0.504)
     setEconomiaArvores(`${_economiaArvores} árvores plantadas`)
   }
 
   return (
-    <CustomForm onSumit={formik.handleSubmit}>
+    <CustomForm onSubmit={formik.handleSubmit}>
       <Row>
         <Col lg={4}>2. Qual o seu consumo elétrico neste mês (kWh)?</Col>
         <Col lg={2}>
@@ -422,12 +428,11 @@ const FormSimulador = (props: TProps) => {
       </Row>
 
       <ButtonsWrapper>
-        <OutLinedButton type="button">Voltar</OutLinedButton>
+        <OutLinedButton type="button" onClick={() => handleFaseChange(1)}>Voltar</OutLinedButton>
         <Button
-          type="button"
+          type="submit"
           showIcon
           spaced
-          onClick={() => handleFaseChange(3)}
         >
           Aderir
         </Button>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import Navbar from './Components/Navbar'
 import Header from './Components/Header'
-import Simuador from './Components/Simulador'
+import Simulador from './Components/Simulador'
 import Footer from 'Components/Footer/Footer'
 import FacaAdesao from './Components/FacaAdesao/FacaAdesao'
 import Contato from 'Components/Pages/Contato'
@@ -18,7 +18,7 @@ const Adesao = () => {
     <>
       <Navbar />
       <Header />
-      {fase === 1 && <Simuador changeToSecondFase={changeToSecondFase} />}
+      {fase === 1 && <Simulador changeToSecondFase={changeToSecondFase} />}
       {fase === 2 && <FacaAdesao />}
       <Beneficios />
       <Contato />

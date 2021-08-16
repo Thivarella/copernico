@@ -137,7 +137,7 @@ const getCO2 = (contaLuz: number) => {
 const getArvores = (contaLuz: number) => {
   const consumo = contaLuz / custoEnergia
   const resultado = (consumo * 1642) / geracaoUsina
-  return formatDecimalNumber(resultado)
+  return formatDecimalNumber(Math.ceil(resultado))
 }
 
 type TInputEvent = {
@@ -150,7 +150,7 @@ type TProps = {
   changeToSecondFase(): void
 }
 
-const Simuador = (props: TProps) => {
+const Simulador = (props: TProps) => {
   const { changeToSecondFase } = props
 
   const [contaLuz, setContaLuz] = useState(initialContaLuzValue)
@@ -220,4 +220,4 @@ const Simuador = (props: TProps) => {
   )
 }
 
-export default Simuador
+export default Simulador

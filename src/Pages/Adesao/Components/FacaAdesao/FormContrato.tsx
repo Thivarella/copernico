@@ -91,7 +91,10 @@ type TInputEvent = {
 type TForm = {
   tipoPessoa: PessoaTipo
   nome: string
+  rg: string
   cpf: string
+  ocupacao: string
+  estadoCivil: string
   razaoSocial: string
   cnpj: string
   email: string
@@ -101,6 +104,16 @@ type TForm = {
   complemento: string
   estado: string
   cidade: string
+  nomeRepresentanteLegal: string
+  rgRepresentanteLegal: string
+  cpfRepresentanteLegal: string
+  ocupacaoRepresentanteLegal: string
+  estadoCivilRepresentanteLegal: string
+  cepRepresentanteLegal: string
+  enderecoRepresentanteLegal: string
+  complementoRepresentanteLegal: string
+  estadoRepresentanteLegal: string
+  cidadeRepresentanteLegal: string
 }
 
 const validationSchema = yup.object().shape({
@@ -108,6 +121,18 @@ const validationSchema = yup.object().shape({
   nome: yup.string().when('tipoPessoa', {
     is: PessoaTipo.FISICA,
     then: yup.string().required('O campo "Nome" é obrigatório'),
+    otherwise: yup.string(),
+  }),
+  ocupacao: yup.string().when('tipoPessoa', {
+    is: PessoaTipo.FISICA,
+    then: yup.string().required('O campo "Ocupação" é obrigatório'),
+    otherwise: yup.string(),
+  }),
+  rg: yup.string().when('tipoPessoa', {
+    is: PessoaTipo.FISICA,
+    then: yup
+      .string()
+      .required('O campo "RG" é obrigatório'),
     otherwise: yup.string(),
   }),
   cpf: yup.string().when('tipoPessoa', {
@@ -164,24 +189,97 @@ const validationSchema = yup.object().shape({
 
       return !isCEPIncomplete && !isCEPZeroed
     }),
+  nomeRepresentanteLegal: yup.string().when('tipoPessoa', {
+    is: PessoaTipo.JURIDICA,
+    then: yup.string().required('O campo "Nome" é obrigatório'),
+    otherwise: yup.string(),
+  }),
+  ocupacaoRepresentanteLegal: yup.string().when('tipoPessoa', {
+    is: PessoaTipo.JURIDICA,
+    then: yup.string().required('O campo "Ocupação" é obrigatório'),
+    otherwise: yup.string(),
+  }),
+  rgRepresentanteLegal: yup.string().when('tipoPessoa', {
+    is: PessoaTipo.JURIDICA,
+    then: yup
+        .string()
+        .required('O campo "RG" é obrigatório'),
+    otherwise: yup.string(),
+  }),
+  cpfRepresentanteLegal: yup.string().when('tipoPessoa', {
+    is: PessoaTipo.JURIDICA,
+    then: yup
+        .string()
+        .required('O campo "CPF" é obrigatório')
+        .test('', 'O CPF informado não é válido', value =>
+            cpfValidator.isValid(value!)
+        ),
+    otherwise: yup.string(),
+  }),
   endereco: yup.string().required('O campo "Endereço" é obrigatório'),
   cidade: yup.string().required('O campo "Cidade" é obrigatório'),
   estado: yup.string().required('O campo "Estado" é obrigatório'),
+  cepRepresentanteLegal: yup
+      .string()
+      .required('O campo "CEP" é obrigatório')
+      .test('', 'Insira um CEP válido', value => {
+        const zeroedCEP = '00000-000'
+        const isCEPZeroed = value === zeroedCEP
+
+        const cleanCEP = removeMaskGuides(String(value))
+        const isCEPIncomplete = cleanCEP.length !== 8
+
+        return !isCEPIncomplete && !isCEPZeroed
+      }),
+  enderecoRepresentanteLegal: yup.string().when('tipoPessoa', {
+    is: PessoaTipo.JURIDICA,
+    then: yup
+        .string()
+        .required('O campo "Endereço" é obrigatório'),
+    otherwise: yup.string(),
+  }),
+  cidadeRepresentanteLegal: yup.string().when('tipoPessoa', {
+    is: PessoaTipo.JURIDICA,
+    then: yup
+        .string()
+        .required('O campo "Cidade" é obrigatório'),
+    otherwise: yup.string(),
+  }),
+  estadoRepresentanteLegal: yup.string().when('tipoPessoa', {
+    is: PessoaTipo.JURIDICA,
+    then: yup
+        .string()
+        .required('O campo "Endereço" é obrigatório'),
+    otherwise: yup.string(),
+  }),
 })
 
 const initialValues: TForm = {
   tipoPessoa: PessoaTipo.FISICA,
   nome: '',
+  rg: '',
   cpf: '',
+  ocupacao: '',
   razaoSocial: '',
   cnpj: '',
   email: '',
   telefone: '',
   cep: '',
+  estadoCivil: '',
   endereco: '',
   complemento: '',
   estado: '',
   cidade: '',
+  nomeRepresentanteLegal: '',
+  rgRepresentanteLegal: '',
+  cpfRepresentanteLegal: '',
+  ocupacaoRepresentanteLegal: '',
+  estadoCivilRepresentanteLegal: '',
+  cepRepresentanteLegal: '',
+  enderecoRepresentanteLegal: '',
+  complementoRepresentanteLegal: '',
+  estadoRepresentanteLegal: '',
+  cidadeRepresentanteLegal: '',
 }
 
 type TProps = {
@@ -194,13 +292,14 @@ const FormContrato = (props: TProps) => {
   const { addToast } = useToasts()
 
   const onSubmit = () => {
-    handleFaseChange(2)
+    localStorage.setItem("faseOne", JSON.stringify(formik.values));
+    handleFaseChange(2);
   }
 
   const formik = useFormik<TForm>({
     initialValues,
     validationSchema,
-    enableReinitialize: true,
+    enableReinitialize: false,
     validateOnChange: true,
     onSubmit,
   })
@@ -236,6 +335,35 @@ const FormContrato = (props: TProps) => {
     formik.setFieldValue('cidade', '')
     formik.setFieldValue('estado', '')
     formik.setFieldValue('endereco', '')
+  }
+
+  const onChangeCEPRepresentanteLegal = async (e: TInputEvent) => {
+    const { value: cep } = e.target
+    formik.handleChange(e)
+
+    const cepNumbers = cep.replace(/_/g, '').replace(/-/g, '')
+    if (cepNumbers.length === 8) {
+      const endereco = await getEndereco(cep)
+      if (!endereco || !endereco.localidade) {
+        addToast('O CEP digitado é inválido!', {
+          appearance: 'error',
+          autoDismiss: true,
+        })
+
+        formik.setFieldValue('cidadeRepresentanteLegal', '')
+        formik.setFieldValue('estadoRepresentanteLegal', '')
+        formik.setFieldValue('endereco', '')
+      }
+
+      formik.setFieldValue('cidadeRepresentanteLegal', endereco.localidade, true)
+      formik.setFieldValue('estadoRepresentanteLegal', endereco.uf, true)
+      formik.setFieldValue('enderecoRepresentanteLegal', endereco.logradouro, true)
+      return
+    }
+
+    formik.setFieldValue('cidadeRepresentanteLegal', '')
+    formik.setFieldValue('estadoRepresentanteLegal', '')
+    formik.setFieldValue('enderecoRepresentanteLegal', '')
   }
 
   return (
@@ -284,6 +412,24 @@ const FormContrato = (props: TProps) => {
           </Form.Group>
 
           <Form.Group>
+            <Input
+                className={`form-control ${
+                    Boolean(formik.touched.rg && formik.errors.rg) && 'is-invalid'
+                }`}
+                name="rg"
+                type="text"
+                placeholder="RG"
+                value={formik.values.rg}
+                onBlur={formik.handleBlur}
+                onChange={formik.handleChange}
+            />
+
+            <Form.Control.Feedback type="invalid">
+              {formik.errors.rg}
+            </Form.Control.Feedback>
+          </Form.Group>
+
+          <Form.Group>
             <MaskedInput
               className={`form-control ${
                 Boolean(formik.touched.cpf && formik.errors.cpf) && 'is-invalid'
@@ -299,6 +445,42 @@ const FormContrato = (props: TProps) => {
 
             <Form.Control.Feedback type="invalid">
               {formik.errors.cpf}
+            </Form.Control.Feedback>
+          </Form.Group>
+
+          <Form.Group>
+            <Input
+                className={`form-control ${
+                    Boolean(formik.touched.ocupacao && formik.errors.ocupacao) && 'is-invalid'
+                }`}
+                name="ocupacao"
+                type="text"
+                placeholder="Ocupação"
+                value={formik.values.ocupacao}
+                onBlur={formik.handleBlur}
+                onChange={formik.handleChange}
+            />
+
+            <Form.Control.Feedback type="invalid">
+              {formik.errors.ocupacao}
+            </Form.Control.Feedback>
+          </Form.Group>
+
+          <Form.Group>
+            <Input
+                className={`form-control ${
+                    Boolean(formik.touched.estadoCivil && formik.errors.estadoCivil) && 'is-invalid'
+                }`}
+                name="estadoCivil"
+                type="text"
+                placeholder="Estado Civil"
+                value={formik.values.estadoCivil}
+                onBlur={formik.handleBlur}
+                onChange={formik.handleChange}
+            />
+
+            <Form.Control.Feedback type="invalid">
+              {formik.errors.estadoCivil}
             </Form.Control.Feedback>
           </Form.Group>
         </>
@@ -467,6 +649,191 @@ const FormContrato = (props: TProps) => {
         </Form.Control.Feedback>
       </Form.Group>
 
+      {formik.values.tipoPessoa === PessoaTipo.JURIDICA ? (
+          <>
+            <hr/>
+            <p>Dados do Representante Legal</p>
+            <Form.Group>
+              <Input
+                  name="nomeRepresentanteLegal"
+                  type="text"
+                  placeholder="Nome completo"
+                  isInvalid={Boolean(formik.touched.nomeRepresentanteLegal && formik.errors.nomeRepresentanteLegal)}
+                  value={formik.values.nomeRepresentanteLegal}
+                  onBlur={formik.handleBlur}
+                  onChange={formik.handleChange}
+              />
+
+              <Form.Control.Feedback type="invalid">
+                {formik.errors.nomeRepresentanteLegal}
+              </Form.Control.Feedback>
+            </Form.Group>
+
+            <Form.Group>
+              <Input
+                  className={`form-control ${
+                      Boolean(formik.touched.rgRepresentanteLegal && formik.errors.rgRepresentanteLegal) && 'is-invalid'
+                  }`}
+                  name="rgRepresentanteLegal"
+                  type="text"
+                  placeholder="RG"
+                  value={formik.values.rgRepresentanteLegal}
+                  onBlur={formik.handleBlur}
+                  onChange={formik.handleChange}
+              />
+
+              <Form.Control.Feedback type="invalid">
+                {formik.errors.rgRepresentanteLegal}
+              </Form.Control.Feedback>
+            </Form.Group>
+
+            <Form.Group>
+              <MaskedInput
+                  className={`form-control ${
+                      Boolean(formik.touched.cpfRepresentanteLegal && formik.errors.cpfRepresentanteLegal) && 'is-invalid'
+                  }`}
+                  name="cpfRepresentanteLegal"
+                  mask={'999.999.999-99'}
+                  type="text"
+                  placeholder="CPF"
+                  value={formik.values.cpfRepresentanteLegal}
+                  onBlur={formik.handleBlur}
+                  onChange={formik.handleChange}
+              />
+
+              <Form.Control.Feedback type="invalid">
+                {formik.errors.cpfRepresentanteLegal}
+              </Form.Control.Feedback>
+            </Form.Group>
+
+            <Form.Group>
+              <Input
+                  className={`form-control ${
+                      Boolean(formik.touched.ocupacaoRepresentanteLegal && formik.errors.ocupacaoRepresentanteLegal) && 'is-invalid'
+                  }`}
+                  name="ocupacaoRepresentanteLegal"
+                  type="text"
+                  placeholder="Ocupação"
+                  value={formik.values.ocupacaoRepresentanteLegal}
+                  onBlur={formik.handleBlur}
+                  onChange={formik.handleChange}
+              />
+
+              <Form.Control.Feedback type="invalid">
+                {formik.errors.ocupacaoRepresentanteLegal}
+              </Form.Control.Feedback>
+            </Form.Group>
+
+
+
+            <Form.Group>
+              <Input
+                  className={`form-control ${
+                      Boolean(formik.touched.estadoCivilRepresentanteLegal && formik.errors.estadoCivilRepresentanteLegal) && 'is-invalid'
+                  }`}
+                  name="estadoCivilRepresentanteLegal"
+                  type="text"
+                  placeholder="Estado Civil"
+                  value={formik.values.estadoCivilRepresentanteLegal}
+                  onBlur={formik.handleBlur}
+                  onChange={formik.handleChange}
+              />
+
+              <Form.Control.Feedback type="invalid">
+                {formik.errors.estadoCivilRepresentanteLegal}
+              </Form.Control.Feedback>
+            </Form.Group>
+
+            <Form.Group>
+              <MaskedInput
+                  className={`form-control ${
+                      Boolean(formik.touched.cepRepresentanteLegal && formik.errors.cepRepresentanteLegal) && 'is-invalid'
+                  }`}
+                  name="cepRepresentanteLegal"
+                  mask="99999-999"
+                  type="text"
+                  placeholder="CEP"
+                  autoComplete="disabled"
+                  value={formik.values.cepRepresentanteLegal}
+                  onBlur={formik.handleBlur}
+                  onChange={onChangeCEPRepresentanteLegal}
+              />
+
+              <Form.Control.Feedback type="invalid">
+                {formik.errors.cepRepresentanteLegal}
+              </Form.Control.Feedback>
+            </Form.Group>
+
+            <Form.Group>
+              <Input
+                  name="enderecoRepresentanteLegal"
+                  type="text"
+                  placeholder="Endereço"
+                  isInvalid={Boolean(formik.touched.enderecoRepresentanteLegal && formik.errors.enderecoRepresentanteLegal)}
+                  value={formik.values.enderecoRepresentanteLegal}
+                  onBlur={formik.handleBlur}
+                  onChange={formik.handleChange}
+              />
+
+              <Form.Control.Feedback type="invalid">
+                {formik.errors.enderecoRepresentanteLegal}
+              </Form.Control.Feedback>
+            </Form.Group>
+
+            <Form.Group>
+              <Input
+                  name="complementoRepresentanteLegal"
+                  type="text"
+                  placeholder="Complemento"
+                  isInvalid={Boolean(
+                      formik.touched.complementoRepresentanteLegal && formik.errors.complementoRepresentanteLegal
+                  )}
+                  value={formik.values.complementoRepresentanteLegal}
+                  onBlur={formik.handleBlur}
+                  onChange={formik.handleChange}
+              />
+
+              <Form.Control.Feedback type="invalid">
+                {formik.errors.complementoRepresentanteLegal}
+              </Form.Control.Feedback>
+            </Form.Group>
+
+            <Form.Group>
+              <Input
+                  name="estadoRepresentanteLegal"
+                  type="text"
+                  placeholder="Estado"
+                  isInvalid={Boolean(formik.touched.estadoRepresentanteLegal && formik.errors.estadoRepresentanteLegal)}
+                  value={formik.values.estadoRepresentanteLegal}
+                  onBlur={formik.handleBlur}
+                  onChange={formik.handleChange}
+                  disabled
+              />
+
+              <Form.Control.Feedback type="invalid">
+                {formik.errors.estadoRepresentanteLegal}
+              </Form.Control.Feedback>
+            </Form.Group>
+
+            <Form.Group>
+              <Input
+                  name="cidadeRepresentanteLegal"
+                  type="text"
+                  placeholder="Cidade"
+                  isInvalid={Boolean(formik.touched.cidadeRepresentanteLegal && formik.errors.cidadeRepresentanteLegal)}
+                  value={formik.values.cidadeRepresentanteLegal}
+                  onBlur={formik.handleBlur}
+                  onChange={formik.handleChange}
+                  disabled
+              />
+
+              <Form.Control.Feedback type="invalid">
+                {formik.errors.cidadeRepresentanteLegal}
+              </Form.Control.Feedback>
+            </Form.Group>
+          </>
+      ) : (<></>)
+      }
       <ButtonsWrapper>
         <OutLinedButton type="button">Voltar</OutLinedButton>
         <Button type="submit">Enviar</Button>
