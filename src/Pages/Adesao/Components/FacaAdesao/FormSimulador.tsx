@@ -204,7 +204,7 @@ const FormSimulador = (props: TProps) => {
     setEconomiaCO2(`Menos ${formattedValorCO2}kg de CO2`)
 
     const _economiaArvores = Math.ceil((valorDesconto / 1000000) * 0.504)
-    setEconomiaArvores(`${_economiaArvores} árvores plantadas`)
+    setEconomiaArvores(`${_economiaArvores} árvore(s) plantada(s)`)
   }
 
   return (

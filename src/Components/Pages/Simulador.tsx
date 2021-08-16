@@ -195,8 +195,8 @@ const Simulador = () => {
         <Frase>
           Menos de <MediumEnphasisValue>{formattedCO2}</MediumEnphasisValue>{' '}
           <strong>kg</strong> de <strong>CO2</strong> ou{' '}
-          <MediumEnphasisValue>{formattedArvores}</MediumEnphasisValue> árvores
-          plantadas
+          <MediumEnphasisValue>{formattedArvores}</MediumEnphasisValue> árvore(s)
+          plantada(s)
         </Frase>
         <Button onClick={onClickScrollToForm}>Quero Economizar</Button>
         <FootNote>

@@ -202,7 +202,7 @@ const Simulador = (props: TProps) => {
             Menos de <MediumEnphasisValue>{formattedCO2}</MediumEnphasisValue>{' '}
             <strong>kg</strong> de <strong>CO2</strong> ou{' '}
             <MediumEnphasisValue>{formattedArvores}</MediumEnphasisValue>{' '}
-            árvores plantadas
+            árvore(s) plantada(s)
           </Frase>
 
           <Button onClick={changeToSecondFase}>Quero Economizar</Button>
